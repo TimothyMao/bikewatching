@@ -8,3 +8,14 @@ body {
     margin: auto;
     padding: 1em;
   }
+
+
+
+label {
+    font-size: 1em;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5em;
+    margin-left: auto; /* Push to the right */
+}
