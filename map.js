@@ -60,6 +60,8 @@ d3.json(jsonurl).then(jsonData => {
             .domain([0, d3.max(stations, d => d.totalTraffic)])
             .range([0, 25]);
 
+        let stationFlow = d3.scaleQuantize().domain([0, 1]).range([0, 0.5, 1]);
+
         map.on('load', () => {
             // Add bike lanes
             map.addSource('boston_route', {
@@ -112,6 +114,12 @@ d3.json(jsonurl).then(jsonData => {
                 .attr('stroke', 'white')
                 .attr('stroke-width', 1)
                 .attr('opacity', 0.8)
+                .style("--departure-ratio", d => {
+                    const departureRatio = d.departures / d.totalTraffic;
+                    console.log(d.short_name, d.departures, d.totalTraffic, departureRatio); // Log the values
+                    console.log(stationFlow(departureRatio)); 
+                    return stationFlow(departureRatio);
+                }) 
                 .each(function(d) {
                     // Add <title> for browser tooltips
                     d3.select(this)
@@ -206,25 +214,34 @@ d3.json(jsonurl).then(jsonData => {
                     return station;
                 });
         
+                // Use a smaller radius scale when timeFilter is -1
+                radiusScale.range([0, 25]);
+            
             } else {
                 selectedTime.textContent = formatTime(timeFilter);  // Display formatted time
                 anyTimeLabel.style.display = 'none';  // Hide "(any time)"
-        
+            
                 // Apply filtering
                 filterTripsbyTime();
+                
+                // Use a larger radius scale when a time filter is applied
+                radiusScale.range([3, 50]);
             }
         
             // Update circles based on filtered or unfiltered data
             d3.select('#map').select('svg').selectAll('circle')
-                .data(filteredStations)
-                .attr('r', d => radiusScale(d.totalTraffic))  // Update radius based on filtered or unfiltered data
-                .each(function(d) {
-                    d3.select(this)
-                      .select('title')
-                      .text(`${d.totalTraffic} trips (${d.departures} departures, ${d.arrivals} arrivals)`);
-                });
+            .data(filteredStations)
+            .attr('r', d => radiusScale(d.totalTraffic))  // Update radius based on filtered or unfiltered data
+            .style("--departure-ratio", d => {
+                const ratio = d.departures / d.totalTraffic;
+                return stationFlow(ratio >= 0 ? ratio : 0);  // Ensure no negative values or NaN
+            })
+            .each(function(d) {
+                d3.select(this)
+                  .select('title')
+                  .text(`${d.totalTraffic} trips (${d.departures} departures, ${d.arrivals} arrivals)`);
+            });
         }
-        
 
         timeSlider.addEventListener('input', updateTimeDisplay);
         updateTimeDisplay();
